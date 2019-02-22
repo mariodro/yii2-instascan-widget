@@ -63,7 +63,7 @@ class QrReader extends \yii\base\Widget
             $this->debug = YII_DEBUG;
         }
         
-        if ($this->debug && $this->noCameraFoundCallback === null)
+        if ($this->debug && $this->successCallback === null)
         {
             $this->successCallback = "function(data){console.log(data);}";
         }
