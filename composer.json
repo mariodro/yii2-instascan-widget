@@ -1,0 +1,21 @@
+{
+    "name": "mdq/yii2-instascan-widget",
+    "description": "Yii2 widget for reading qr code using instascan pluggin",
+    "type": "yii2-extension",
+    "keywords": ["yii2","extension","instascan"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Mario Droguett",
+            "email": "mariodro@hotmail.com"
+        }
+    ],
+    "require": {
+        "yiisoft/yii2": "~2.0.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "mdq\\instascan\\": ""
+        }
+    }
+}
