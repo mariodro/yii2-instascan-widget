@@ -17,4 +17,7 @@ class QrReaderAsset extends AssetBundle{
         'js/lib/instascan.min.js',
         //'js/qrcode-reader.js',
     ]; 
+    public $depends = [
+        'yii\web\JqueryAsset',
+    ];
 }

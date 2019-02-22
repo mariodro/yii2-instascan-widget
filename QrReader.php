@@ -13,13 +13,15 @@ use yii\helpers\ArrayHelper;
  */
 class QrReader extends \yii\base\Widget
 {
-    public $readerWidth = '300px';
-    public $readerHeight = '188px';
+    public $videoOptions = [];
+    // When buttonLabel is "false", render camera immediately.
     public $buttonLabel = 'Scan';
     public $buttonOptions = [];
     public $options = [];
     
-    public $successCallback = 'function(data){console.log(data);}';
+    public $successCallback;
+    public $noCameraFoundCallback;
+    public $initErrorCallback;
     
     // Whether to scan continuously for QR codes. If false, use scanner.scan() to manually scan.
     // If true, the scanner emits the "scan" event when a QR code is scanned. Default true.
@@ -45,14 +47,35 @@ class QrReader extends \yii\base\Widget
     // increases CPU usage but makes scan response faster. Default 1 (i.e. analyze every frame).
     public $scanPeriod = 10;
     
+    public $debug;
     
     public function init() {
         
-        $button_id = ArrayHelper::getValue($this->buttonOptions, 'id', $this->id.'-scan-btn');
-        $this->buttonOptions = ArrayHelper::merge(['id' => $button_id, 'class' => 'btn btn-default'], $this->buttonOptions);
+        $this->buttonOptions = ArrayHelper::merge(['id' => $this->id.'-scan-btn', 'class' => 'btn btn-default'], $this->buttonOptions);
         
         $this->options['id'] = $this->id;
         $this->options = ArrayHelper::merge(['class' => 'qr-reader'], $this->options);
+        
+        $this->videoOptions = ArrayHelper::merge(['id' => $this->id."-preview", 'class' => 'qr-reader-preview', 'style' => 'width: 300px; height: 188px; '], $this->videoOptions);
+        
+        if ($this->debug === null)
+        {
+            $this->debug = YII_DEBUG;
+        }
+        
+        if ($this->debug && $this->noCameraFoundCallback === null)
+        {
+            $this->successCallback = "function(data){console.log(data);}";
+        }
+        if ($this->debug && $this->noCameraFoundCallback === null)
+        {
+            $this->noCameraFoundCallback = "function(cameras){console.error('No cameras found.');}";
+        }
+        
+        if ($this->debug && $this->initErrorCallback === null)
+        {
+            $this->initErrorCallback = "function (e) {console.error(e);}";
+        }
         
         QrReaderAsset::register($this->getView());
     }
@@ -60,14 +83,14 @@ class QrReader extends \yii\base\Widget
     public function run()
     {
         $this->registerJsOptions();
+        $content = '';
+        if ($this->buttonLabel !== false)
+        {
+            $content .= Html::Button($this->buttonLabel, $this->buttonOptions);
+            $this->videoOptions['style'] .= '; display: none;';
+        }
         
-        $content = Html::Button($this->buttonLabel, $this->buttonOptions);
-        
-        $content .= Html::tag('video', '', [
-            'id' => $this->id."-preview",
-            'class' => 'qr-reader-preview',
-            'style' => "display: block; width:$this->readerWidth; height:$this->readerHeight; display: none;",
-        ]);
+        $content .= Html::tag('video', '', $this->videoOptions);
         
         echo Html::tag('span', $content, [
             'id' => $this->id,
@@ -78,6 +101,8 @@ class QrReader extends \yii\base\Widget
     
     protected function registerJsOptions(){
         $id = $this->id;
+        $videoId = $this->videoOptions['id'];
+        
         $jsvar = str_replace('-', '', $id);
         $options = Json::encode([
             'video' => new JsExpression("document.getElementById('$id-preview')"),
@@ -88,36 +113,53 @@ class QrReader extends \yii\base\Widget
             'refractoryPeriod' => $this->refractoryPeriod,
             'scanPeriod' => $this->scanPeriod, 
         ]);
-                                
+        
+        $successCallback = $this->successCallback ? "{$jsvar}_scanner.addListener('scan', {$this->successCallback});" : '';
+        $noCameraFoundCallback = $this->noCameraFoundCallback !== null ? '('.$this->noCameraFoundCallback.')(cameras);' : '';
+        $initErrorCallback = $this->initErrorCallback !== null ? '('.$this->initErrorCallback.')(e);' : '';
+        
+        $buttonEvent = $this->buttonLabel !== false ?
+<<<JS
+$('#{$this->buttonOptions['id']}').on('click', function(){
+    $(this).hide();
+    $('#$videoId').show();
+    {$jsvar}_init();
+});
+JS
+        : '';
+    
+        $buttonOnScanListener = $this->buttonLabel !== false ?
+<<<JS
+    {$jsvar}_scanner.addListener('scan', function(data){
+        {$jsvar}_scanner.stop();
+        $('#$videoId').hide();
+    });
+JS
+        : '';
+        
         $view = $this->getView();
         $view->registerJs(
 <<<JS
 let {$jsvar}_scanner;
-$('#{$this->buttonOptions['id']}').on('click', function(){
-    $(this).hide();
-    $('#$id-preview').show();
-    
+{$jsvar}_init = function() {
     if (typeof {$jsvar}_scanner == 'undefined')
     {
         {$jsvar}_scanner = new Instascan.Scanner($options);
-        {$jsvar}_scanner.addListener('scan', function(data){
-            {$jsvar}_scanner.stop();
-            $('#$id-preview').hide();
-        });
-        {$jsvar}_scanner.addListener('scan', {$this->successCallback});
+        $buttonOnScanListener
+        $successCallback;
         window.scan = {$jsvar}_scanner;
     }
     Instascan.Camera.getCameras().then(function (cameras) {
       if (cameras.length > 0) {
         {$jsvar}_scanner.start(cameras[0]);
       } else {
-        console.error('No cameras found.');
+        $noCameraFoundCallback
       }
     }).catch(function (e) {
-      console.error(e);
+      $initErrorCallback
     });
-        
-});
+};
+$buttonEvent  
 JS
         );
     }

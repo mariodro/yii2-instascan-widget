@@ -30,35 +30,39 @@ Once the extension is installed, simply use it in your code by  :
 
 ```php
 <?= QrReader::widget([
-        'readerWidth' = '300px',
-        'readerHeight' = '188px',
-        'buttonLabel' = 'Scan',
-        'buttonOptions' = [],
-        'options' = [],
-    
-        'successCallback' = 'function(data){console.log(data);}',
+        'videoOptions' => ['class' => 'qr-reader-preview', 'style' => 'width: 300px; height: 188px; '];
+        // When buttonLabel is "false", render camera immediately.
+        'buttonLabel' => 'Scan';
+        'buttonOptions' => ['class' => 'btn btn-default'];
+        'options' = ['class' => 'qr-reader'];
+
+        'successCallback' => 'function(data){console.log(data);}',
+        'noCameraFoundCallback' => 'function(cameras){console.error('No cameras found.');}';
+        'initErrorCallback' => 'function (e) {console.error(e);}';
 
         // Whether to scan continuously for QR codes. If false, use scanner.scan() to manually scan.
         // If true, the scanner emits the "scan" event when a QR code is scanned. Default true.
-        'continuous' = true,
+        'continuous' => true,
 
         // Whether to horizontally mirror the video preview. This is helpful when trying to
         // scan a QR code with a user-facing camera. Default true.
-        'mirror' = true,
+        'mirror' => true,
 
         // Whether to include the scanned image data as part of the scan result. See the "scan" event
         // for image format details. Default false.
-        'captureImage' = false,
+        'captureImage' => false,
 
         // Only applies to continuous mode. Whether to actively scan when the tab is not active.
         // When false, this reduces CPU usage when the tab is not active. Default true.
-        'backgroundScan' = false,
+        'backgroundScan' => false,
 
         // Only applies to continuous mode. The period, in milliseconds, before the same QR code
         // will be recognized in succession. Default 5000 (5 seconds).
-        'refractoryPeriod' = 5000,
+        'refractoryPeriod' => 5000,
 
         // Only applies to continuous mode. The period, in rendered frames, between scans. A lower scan period
         // increases CPU usage but makes scan response faster. Default 1 (i.e. analyze every frame).
-        'scanPeriod' = 10,
+        'scanPeriod' => 10,
+
+        'debug' => YII_DEBUG,
     ]); ?>```
