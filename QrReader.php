@@ -14,6 +14,7 @@ use yii\helpers\ArrayHelper;
 class QrReader extends \yii\base\Widget
 {
     public $videoOptions = [];
+    public $videoWrapperOptions = [];
     // When buttonLabel is "false", render camera immediately.
     public $buttonLabel = 'Scan';
     public $buttonOptions = [];
@@ -29,7 +30,7 @@ class QrReader extends \yii\base\Widget
     
     // Whether to horizontally mirror the video preview. This is helpful when trying to
     // scan a QR code with a user-facing camera. Default true.
-    public $mirror = true;
+    public $mirror = false;
     
     // Whether to include the scanned image data as part of the scan result. See the "scan" event
     // for image format details. Default false.
@@ -56,7 +57,8 @@ class QrReader extends \yii\base\Widget
         $this->options['id'] = $this->id;
         $this->options = ArrayHelper::merge(['class' => 'qr-reader'], $this->options);
         
-        $this->videoOptions = ArrayHelper::merge(['id' => $this->id."-preview", 'class' => 'qr-reader-preview', 'style' => 'width: 300px; height: 188px; '], $this->videoOptions);
+        $this->videoOptions = ArrayHelper::merge(['id' => $this->id."-preview", 'class' => 'qr-reader-preview', 'style' => 'width: 100%; height: 100%; object-fit: cover; '], $this->videoOptions);
+        $this->videoWrapperOptions = ArrayHelper::merge(['id' => $this->id."-wrapper", 'class' => 'qr-reader-wrapper', 'style' => 'width: 300px; height: 188px; overflow: hidden; '], $this->videoWrapperOptions);
         
         if ($this->debug === null)
         {
@@ -87,10 +89,9 @@ class QrReader extends \yii\base\Widget
         if ($this->buttonLabel !== false)
         {
             $content .= Html::Button($this->buttonLabel, $this->buttonOptions);
-            $this->videoOptions['style'] .= '; display: none;';
         }
         
-        $content .= Html::tag('video', '', $this->videoOptions);
+        $content .= Html::tag('div', Html::tag('video', '', $this->videoOptions), $this->videoWrapperOptions);
         
         echo Html::tag('span', $content, [
             'id' => $this->id,
@@ -102,10 +103,12 @@ class QrReader extends \yii\base\Widget
     protected function registerJsOptions(){
         $id = $this->id;
         $videoId = $this->videoOptions['id'];
+        $videoWrapperId = $this->videoWrapperOptions['id'];
+        
         
         $jsvar = str_replace('-', '', $id);
         $options = Json::encode([
-            'video' => new JsExpression("document.getElementById('$id-preview')"),
+            'video' => new JsExpression("document.getElementById('$videoId')"),
             'continuous' => $this->continuous,
             'mirror' => $this->mirror,
             'captureImage' => $this->captureImage,
@@ -120,9 +123,10 @@ class QrReader extends \yii\base\Widget
         
         $buttonEvent = $this->buttonLabel !== false ?
 <<<JS
+$('#$videoWrapperId').hide();
 $('#{$this->buttonOptions['id']}').on('click', function(){
     $(this).hide();
-    $('#$videoId').show();
+    $('#$videoWrapperId').show();
     {$jsvar}_init();
 });
 JS
@@ -132,7 +136,7 @@ JS
 <<<JS
     {$jsvar}_scanner.addListener('scan', function(data){
         {$jsvar}_scanner.stop();
-        $('#$videoId').hide();
+        $('#$videoWrapperId').hide();
     });
 JS
         : '';
@@ -151,7 +155,7 @@ let {$jsvar}_scanner;
     }
     Instascan.Camera.getCameras().then(function (cameras) {
       if (cameras.length > 0) {
-        {$jsvar}_scanner.start(cameras[0]);
+        {$jsvar}_scanner.start(cameras[cameras.length - 1]);
       } else {
         $noCameraFoundCallback
       }
