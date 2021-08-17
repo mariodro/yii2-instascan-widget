@@ -144,7 +144,7 @@ JS
         $view = $this->getView();
         $view->registerJs(
 <<<JS
-let {$jsvar}_scanner;
+var {$jsvar}_scanner;
 {$jsvar}_init = function() {
     if (typeof {$jsvar}_scanner == 'undefined')
     {
